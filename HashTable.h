@@ -4,7 +4,7 @@
 #include "GenericList.h"
 #include "wet2util.h"
 
-const int INITIAL_SIZE = 15;
+const int INITIAL_SIZE = 24;
 
 class HashFunction {
 protected:
@@ -28,10 +28,10 @@ public:
 
 template <typename T>
 class HashTable {
-    GenericList<T>* array; //GenericList is not the owner of the data
     HashFunction* hash;
     int size;
     int elements_count;
+    GenericList<T>* array; //GenericList is not the owner of the data
 
 public:
     int getSize() const {
@@ -46,7 +46,8 @@ public:
     double getLoadFactor() const {
         return (double)elements_count / (double) size;
     }
-    HashTable() : size(INITIAL_SIZE), elements_count(0), hash(new ModuloHash(INITIAL_SIZE)) {
+    HashTable() : hash(new ModuloHash(INITIAL_SIZE)), size(INITIAL_SIZE),
+                        elements_count(0) {
         array = new GenericList<T>[size];
     }
 
@@ -55,7 +56,11 @@ public:
         delete hash;
     }
 
-    GenericListNode<T>* find(int key, int* index) {
+    GenericListNode<T>* find(int key, int* index = nullptr){
+        if(!index){
+            int tmp_index = (*hash)(key);
+            return array[tmp_index].find(key);
+        }
         *index = (*hash)(key);
         return array[*index].find(key);
     }
@@ -102,14 +107,22 @@ public:
 
     StatusType remove(int key) {
         int index;
-        GenericListNode<T>* node = find(key, &index);
-        if (node) {
+        GenericListNode<T> *node = find(key, &index);
+        if (!node) {
+            return StatusType::FAILURE;
+        }
+        try {
             array[index].removeNode(node);
             elements_count--;
+            if (getLoadFactor() < 0.25 && size > INITIAL_SIZE) {
+                copyToNewArray(size / 2);
+            }
             return StatusType::SUCCESS;
+        } catch (std::bad_alloc &) {
+            return StatusType::ALLOCATION_ERROR;
         }
-        return StatusType::FAILURE;
     }
+
 };
 
 
