@@ -1,99 +1,48 @@
-// 
-// 234218 Data Structures 1.
-// Semester: 2025A (Winter).
-// Wet Exercise #2.
-// 
-// The following main file is necessary to link and run your code.
-// This file is READ ONLY: even if you submit something else, the compiler will use our file.
-// 
-
-#include "plains25a2.h"
-#include <string>
 #include <iostream>
+#include "HashTable.h" // Include your hash table implementation
 
-using namespace std;
-
-void print(string cmd, StatusType res);
-void print(string cmd, output_t<int> res);
-void print(string cmd, output_t<bool> res);
-
-int main()
-{
-    
-    int d1, d2;
-
-    // Init
-    Plains *obj = new Plains();
-    
-    // Execute all commands in file
-    string op;
-    while (cin >> op)
-    {
-        if (!op.compare("add_team")) {
-            cin >> d1;
-            print(op, obj->add_team(d1));
-        } else if (!op.compare("add_jockey")) {
-            cin >> d1 >> d2;
-            print(op, obj->add_jockey(d1, d2));
-        } else if (!op.compare("update_match")) {
-            cin >> d1 >> d2;
-            print(op, obj->update_match(d1, d2));
-        } else if (!op.compare("merge_teams")) {
-            cin >> d1 >> d2;
-            print(op, obj->merge_teams(d1, d2));
-        } else if (!op.compare("unite_by_record")) {
-            cin >> d1;
-            print(op, obj->unite_by_record(d1));
-        } else if (!op.compare("get_jockey_record")) {
-            cin >> d1;
-            print(op, obj->get_jockey_record(d1));
-        } else if (!op.compare("get_team_record")) {
-            cin >> d1;
-            print(op, obj->get_team_record(d1));
-        } else {
-            cout << "Unknown command: " << op << endl;
-            return -1;
-        }
-        // Verify no faults
-        if (cin.fail()){
-            cout << "Invalid input format" << endl;
-            return -1;
-        }
+struct Data {
+    int value;
+    Data(int v) : value(v) {}
+    int getKey() const {
+        return value; // Key is the same as the value for simplicity
     }
-
-    // Quit 
-    delete obj;
-    return 0;
-}
-
-// Helpers
-static const char *StatusTypeStr[] =
-{
-    "SUCCESS",
-    "ALLOCATION_ERROR",
-    "INVALID_INPUT",
-    "FAILURE"
 };
 
-void print(string cmd, StatusType res) 
-{
-    cout << cmd << ": " << StatusTypeStr[(int) res] << endl;
-}
+int main() {
+    // Create a hash table
+    HashTable<Data> hashTable;
 
-void print(string cmd, output_t<int> res)
-{
-    if (res.status() == StatusType::SUCCESS) {
-        cout << cmd << ": " << StatusTypeStr[(int) res.status()] << ", " << res.ans() << endl;
-    } else {
-        cout << cmd << ": " << StatusTypeStr[(int) res.status()] << endl;
-    }
-}
+    // Initial capacity
+    int initialCapacity = 15; // INITIAL_SIZE in your implementation
+    std::cout << "Initial Capacity: " << initialCapacity << std::endl;
 
-void print(string cmd, output_t<bool> res)
-{
-    if (res.status() == StatusType::SUCCESS) {
-        cout << cmd << ": " << StatusTypeStr[(int) res.status()] << ", " << (res.ans() ? "True" : "False") << endl;
-    } else {
-        cout << cmd << ": " << StatusTypeStr[(int) res.status()] << endl;
+    // Insert elements and check resizing
+    int numElements = 20; // More than half of initialCapacity to trigger resizing
+    for (int i = 0; i < numElements; ++i) {
+        Data* data = new Data(i);
+        StatusType status = hashTable.insert(i, data);
+        if (status == StatusType::SUCCESS) {
+            std::cout << "Inserted: " << i << std::endl;
+        } else {
+            std::cout << "Failed to insert: " << i << std::endl;
+        }
+
+        // Print the load factor and capacity after each insertion
+        std::cout << "Load Factor: " << hashTable.getLoadFactor() << ", Capacity: " << hashTable.getSize() << std::endl;
     }
+
+    // Verify all elements are still accessible
+    std::cout << "\nVerifying elements after resizing..." << std::endl;
+    for (int i = 0; i < numElements; ++i) {
+        int index;
+        GenericListNode<Data>* node = hashTable.find(i, &index);
+        if (node && node->getData()->getKey() == i) {
+            std::cout << "Found: " << i << " in index: " << index << std::endl;
+        } else {
+            std::cout << "Error: Element " << i << " not found!" << std::endl;
+        }
+    }
+
+    return 0;
 }
