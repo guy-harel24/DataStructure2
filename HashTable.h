@@ -5,6 +5,9 @@
 #include "wet2util.h"
 
 const int INITIAL_SIZE = 24;
+const double LOAD_FACTOR_UPPER_LIMIT = 0.5;
+const double LOAD_FACTOR_BOTTOM_LIMIT = 0.25;
+const int RESIZING_FACTOR = 2;
 
 class HashFunction {
 protected:
@@ -22,7 +25,7 @@ class ModuloHash : public HashFunction {
 public:
    explicit ModuloHash(int size) : HashFunction(size) {}
     int operator()(int x) const override {
-        return x % size;
+        return (x % size + size) % size; // Ensures non-negative result
     }
 };
 
@@ -31,7 +34,7 @@ class HashTable {
     HashFunction* hash;
     int size;
     int elements_count;
-    GenericList<T>* array; //GenericList is not the owner of the data
+    GenericList<T>* array; //GenericList is not the owner of the data - Yet!!
 
 public:
     int getSize() const {
@@ -77,7 +80,7 @@ public:
                 int index = (*hash)(key);
                 new_array[index].insert(key, data);
                 GenericListNode<T>* next = head->getNext();
-                array[i].removeNode(head);
+                head->loseData();
                 head = next;
             }
         }
@@ -89,20 +92,20 @@ public:
 
     StatusType insert(int key, T* data) {
         int index;
-        if (find(key, &index)){
+        GenericListNode<T>* node = find(key, &index);
+        if (node != nullptr){
             return StatusType::FAILURE;
         }
         try {
-            if (getLoadFactor() >= 0.5) {
-                copyToNewArray(size * 2); // Resize if load factor >= 0.5
+            if (getLoadFactor() >= LOAD_FACTOR_UPPER_LIMIT) {
+                copyToNewArray(size * RESIZING_FACTOR); // Resize if load factor >= 0.5
             }
             array[index].insert(key, data);
-        } catch (std::bad_alloc&) {
+            elements_count++;
+            return StatusType::SUCCESS;
+        } catch (std::bad_alloc&){
             return StatusType::ALLOCATION_ERROR;
         }
-
-        elements_count++;
-        return StatusType::SUCCESS;
     }
 
     StatusType remove(int key) {
@@ -114,13 +117,16 @@ public:
         try {
             array[index].removeNode(node);
             elements_count--;
-            if (getLoadFactor() < 0.25 && size > INITIAL_SIZE) {
-                copyToNewArray(size / 2);
+            if (getLoadFactor() < LOAD_FACTOR_BOTTOM_LIMIT && size > INITIAL_SIZE) {
+                copyToNewArray(size / RESIZING_FACTOR);
             }
             return StatusType::SUCCESS;
         } catch (std::bad_alloc &) {
             return StatusType::ALLOCATION_ERROR;
         }
+    }
+    GenericList<T>* getArray(){
+        return array;
     }
 
 };

@@ -17,7 +17,7 @@ public:
         while (head) {
             GenericListNode<T>* temp = head;
             head = head->next;
-            delete temp;
+            delete temp; // Automatically deletes `data` via node destructor
         }
         tail = nullptr;
     }
@@ -35,12 +35,13 @@ public:
     }
 
     GenericListNode<T>* find(int key) {
-        while (head) {
-            if (head->getKey() == key)
+        GenericListNode<T>* tmp = head;
+        while (tmp) {
+            if (tmp->getKey() == key)
             {
-                return head;
+                return tmp;
             }
-                head = head->next;
+                tmp = tmp->next;
         }
         return nullptr;
     }
@@ -101,7 +102,10 @@ public:
     GenericListNode(int key, T* data, GenericListNode<T>* next = nullptr, GenericListNode<T>* last = nullptr)
             : key(key), data(data), next(next), last(last) {}
 
-    ~GenericListNode() = default;
+    ~GenericListNode(){
+        delete data;
+        data = nullptr;
+    }
 
     int getKey() const {
         return key;
@@ -109,6 +113,10 @@ public:
 
     T* getData() const {
         return data;
+    }
+
+    void loseData(){
+        data = nullptr;
     }
 
     GenericListNode<T>* getNext() const {
